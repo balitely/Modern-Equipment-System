@@ -1,7 +1,7 @@
 package com.modernequipment.event;
 
-import com.moderndamage.control.config.ModClothConfig;
 import com.modernequipment.MESMod;
+import com.modernequipment.compat.ModernDamageCompat;
 import com.modernequipment.core.data.AttachmentData;
 import com.modernequipment.core.data.CombatProperties;
 import com.modernequipment.core.data.ModifierProperties;
@@ -32,8 +32,7 @@ public class AttachmentTooltipHandler {
         int currentDura = maxDura - stack.getDamageValue();
         if (currentDura < 0) currentDura = 0;
 
-        ModClothConfig config = ModClothConfig.get();
-        boolean precise = config.enablePreciseHitbox && config.damageModel == ModClothConfig.DamageModel.HARDCORE;
+        boolean precise = ModernDamageCompat.isPreciseMode();
 
         List<String> mountSlots = data.getMountSlots();
         if (mountSlots != null && !mountSlots.isEmpty()) {

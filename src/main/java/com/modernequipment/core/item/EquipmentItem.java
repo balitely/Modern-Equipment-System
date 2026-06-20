@@ -194,6 +194,14 @@ public class EquipmentItem extends Item implements ICurioItem, IModifiableEquipm
         Multimap<Attribute, AttributeModifier> modifiers = HashMultimap.create();
         if (data == null) return modifiers;
 
+        // 添加MC原版护甲属性
+        if (data.getVanillaArmor() > 0) {
+            addModifier(modifiers, Attributes.ARMOR, data.getVanillaArmor(), AttributeModifier.Operation.ADDITION, "mes_vanilla_armor");
+        }
+        if (data.getVanillaArmorToughness() > 0) {
+            addModifier(modifiers, Attributes.ARMOR_TOUGHNESS, data.getVanillaArmorToughness(), AttributeModifier.Operation.ADDITION, "mes_vanilla_armor_toughness");
+        }
+
         if (data.getModifiers() != null) {
             float moveSpeed = data.getModifiers().getMovementSpeed();
             float ergonomics = data.getModifiers().getErgonomics();

@@ -1,9 +1,8 @@
 package com.modernequipment;
 
-import com.moderndamage.control.api.ProtectionSourceProviderRegistry;
-import com.modernequipment.compat.EZWeightCompatibility;
 import com.modernequipment.compat.MDCConfigWriter;
 import com.modernequipment.compat.MESProtectionSourceProvider;
+import com.modernequipment.compat.ModernDamageCompat;
 import com.modernequipment.core.data.AttachmentData;
 import com.modernequipment.core.data.EquipmentData;
 import com.modernequipment.core.item.AttachmentItem;
@@ -100,9 +99,50 @@ public class MESMod {
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(this::onRightClick);
         ModMenus.MENUS.register(modEventBus);
         registerPackets();
-        MinecraftForge.EVENT_BUS.register(new ArmorHitListener());
-        MinecraftForge.EVENT_BUS.register(new AttachmentTooltipHandler());
         MinecraftForge.EVENT_BUS.register(new EquipmentTooltipHandler());
+        MinecraftForge.EVENT_BUS.register(new AttachmentTooltipHandler());
+
+        // 条件注册 MDC 相关功能
+        registerMDCFeatures();
+    }
+
+    /**
+     * 仅在 MDC 加载时注册 ArmorHitListener 和 ProtectionSourceProvider。
+     * 避免直接引用 MDC 事件类型，全部通过反射 + ModernDamageCompat 桥接。
+     */
+    private void registerMDCFeatures() {
+        if (!ModernDamageCompat.isLoaded()) {
+            LOGGER.info("MDC not loaded – skipping ArmorHitListener and ProtectionSourceProvider registration");
+            return;
+        }
+
+        try {
+            // 1. 通过反射注册 ArmorHitEvent 监听器
+            Class<?> armorHitEventClass = Class.forName("com.moderndamage.control.api.event.ArmorHitEvent");
+            MinecraftForge.EVENT_BUS.addListener(
+                    net.minecraftforge.eventbus.api.EventPriority.NORMAL, false,
+                    (Class) armorHitEventClass,
+                    (java.util.function.Consumer) event ->
+                            ArmorHitListener.handleArmorHit((net.minecraftforge.eventbus.api.Event) event));
+            LOGGER.info("Registered ArmorHitListener via reflection (MDC loaded)");
+        } catch (Exception e) {
+            LOGGER.error("Failed to register ArmorHitEvent listener", e);
+        }
+
+        // 2. 注册 ProtectionSourceProvider
+        registerProviderViaReflection();
+    }
+
+    private void registerProviderViaReflection() {
+        try {
+            // 创建 MESProtectionSourceProvider 实例
+            MESProtectionSourceProvider provider = new MESProtectionSourceProvider();
+            // 通过 ModernDamageCompat 注册到 MDC
+            ModernDamageCompat.registerProtectionSourceProvider(provider);
+            LOGGER.info("MESProtectionSourceProvider registered");
+        } catch (Exception e) {
+            LOGGER.error("Failed to register MESProtectionSourceProvider", e);
+        }
     }
 
     private void registerPackets() {
@@ -131,27 +171,25 @@ public class MESMod {
         CHANNEL.registerMessage(packetId++, clazz, encoder, decoder, handler);
     }
 
-    private void registerProtectionProvider() {
-        try {
-            ProtectionSourceProviderRegistry.register(new MESProtectionSourceProvider());
-            LOGGER.info("Successfully registered MES ProtectionSourceProvider to MDC");
-        } catch (Throwable e) {
-            LOGGER.error("Failed to register MES ProtectionSourceProvider. Is MDC loaded?", e);
-        }
-    }
-
     private void commonSetup(final FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
             EquipmentPackLoader.loadPacks();
             LOGGER.info("Loaded {} equipment, {} attachments",
                     EquipmentDataManager.getAllEquipment().size(),
                     EquipmentDataManager.getAllAttachments().size());
-            EZWeightCompatibility.syncWeights();
+
+            // EZWeight 兼容（已经是软依赖）
+            try {
+                Class<?> ezCompat = Class.forName("com.modernequipment.compat.EZWeightCompatibility");
+                ezCompat.getMethod("syncWeights").invoke(null);
+            } catch (Exception e) {
+                LOGGER.debug("EZWeight sync skipped", e);
+            }
+
+            // MDC 配置写入（内部已检查 MDC 加载状态）
             MDCConfigWriter.updateAndReload();
 
-            LOGGER.info("Attempting to register MES ProtectionSourceProvider...");
-            registerProtectionProvider();
-            LOGGER.info("MES ProtectionSourceProvider registration process completed.");
+            LOGGER.info("Common setup completed");
         });
     }
 

@@ -74,7 +74,7 @@ description='''Modern Equipment System expands Modern Damage Control with tactic
     side="BOTH"
 [[dependencies."modernequipment"]]
 modId="moderndamage"
-mandatory=true
+mandatory=false
 ordering="NONE"
 side="BOTH"
 versionRange="[0.0.4,)"

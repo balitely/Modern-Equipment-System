@@ -1,14 +1,9 @@
 package com.modernequipment.client.gui.components.refit;
 
-import com.moderndamage.control.api.ModDamagePart;
-import com.moderndamage.control.api.ModDamageSubPart;
-import com.moderndamage.control.armor.ArmorData;
-import com.moderndamage.control.armor.ArmorDataLoader;
-import com.moderndamage.control.config.ModClothConfig;
-import com.moderndamage.control.util.RomanNumberHelper;
 import com.modernequipment.MESMod;
 import com.modernequipment.api.attachment.AttachmentType;
 import com.modernequipment.api.equipment.IModifiableEquipment;
+import com.modernequipment.compat.ModernDamageCompat;
 import com.modernequipment.core.data.AttachmentData;
 import com.modernequipment.core.data.EquipmentData;
 import com.modernequipment.core.item.EquipmentArmorItem;
@@ -28,10 +23,6 @@ import java.util.Map;
 public final class EquipmentPropertyDiagrams {
 
     private static final String ATTACHMENTS_DURABILITY_KEY = "AttachmentsDurability";
-
-    private static ModClothConfig getConfig() {
-        return ModClothConfig.get();
-    }
 
     public static void draw(GuiGraphics graphics, Font font, int x, int y,
                             ItemStack equipmentStack, IModifiableEquipment modifiable, String equipmentType) {
@@ -57,8 +48,8 @@ public final class EquipmentPropertyDiagrams {
         int remainingDura = maxDura - curDura;
         float weight = data.getWeight();
 
-        boolean precise = isPreciseMode();
-        ArmorData armorData = ArmorDataLoader.getArmorData(equipmentStack.getItem());
+        boolean precise = ModernDamageCompat.isPreciseMode();
+        Object armorData = ModernDamageCompat.getArmorData(equipmentStack.getItem());
 
         int panelHeight = calculatePanelHeight(equipmentType, precise);
         graphics.fill(x, y, x + 288, y + panelHeight, 0xAF222222);
@@ -98,7 +89,7 @@ public final class EquipmentPropertyDiagrams {
     }
 
     private static void drawHelmetProperties(GuiGraphics graphics, Font font, boolean precise,
-                                             ArmorData armorData, ItemStack stack, IModifiableEquipment modifiable,
+                                             Object armorData, ItemStack stack, IModifiableEquipment modifiable,
                                              float moveSpeed, float ergonomics,
                                              int remainingDura, int maxDura, float weight,
                                              int barStartX, int barEndX, int barMaxWidth,
@@ -107,29 +98,27 @@ public final class EquipmentPropertyDiagrams {
         if (precise) {
             graphics.drawString(font, Component.translatable("gui.modernequipment.refit.protection_level"), nameX, yOffset, fontColor, false);
             yOffset += 10;
-            ModDamageSubPart[] subParts = {ModDamageSubPart.HEAD_TOP, ModDamageSubPart.HEAD_FACE, ModDamageSubPart.HEAD_NECK};
-            for (ModDamageSubPart subPart : subParts) {
-                int totalLevel = MESProtectionCalculator.getTotalSubProtectionLevel(stack, modifiable, subPart);
+            String[] subPartKeys = {"head_top", "head_face", "head_neck"};
+            for (String subPartKey : subPartKeys) {
+                int totalLevel = MESProtectionCalculator.getTotalSubProtectionLevel(stack, modifiable, subPartKey);
                 if (totalLevel == 0) continue;
-                int totalToughness = MESProtectionCalculator.getTotalSubToughness(stack, modifiable, subPart);
-                String roman = RomanNumberHelper.toRomanGrade(totalLevel);
-                String subPartKey = "tooltip.moderndamage.subpart." + subPart.getSubKey();
-                Component subPartName = Component.translatable(subPartKey);
+                int totalToughness = MESProtectionCalculator.getTotalSubToughness(stack, modifiable, subPartKey);
+                String roman = ModernDamageCompat.toRomanGrade(totalLevel);
+                Component subPartName = Component.translatable("tooltip.moderndamage.subpart." + subPartKey);
                 Component line = Component.translatable("tooltip.moderndamage.protection_line_roman", subPartName, roman, totalLevel)
                         .append(Component.literal(" [" + totalToughness + "]").withStyle(ChatFormatting.GRAY));
                 graphics.drawString(font, line, nameX + 5, yOffset, fontColor, false);
                 yOffset += 10;
             }
-            float materialFactor = armorData != null ? armorData.getMaterialFactor(ModDamagePart.HEAD) : 1.0f;
+            float materialFactor = ModernDamageCompat.getMaterialFactor(armorData, "HEAD");
             graphics.drawString(font, Component.translatable("gui.modernequipment.refit.material_factor"), nameX, yOffset, fontColor, false);
             graphics.drawString(font, String.format("%.2f", materialFactor), valueX, yOffset, fontColor, false);
             yOffset += 10;
         } else {
-            ModDamagePart part = ModDamagePart.HEAD;
-            int totalLevel = MESProtectionCalculator.getTotalProtectionLevel(stack, modifiable, part);
-            int totalToughness = MESProtectionCalculator.getTotalToughness(stack, modifiable, part);
-            float ricochet = MESProtectionCalculator.getTotalRicochetChance(stack, modifiable, part);
-            float materialFactor = armorData != null ? armorData.getMaterialFactor(part) : 1.0f;
+            int totalLevel = MESProtectionCalculator.getTotalProtectionLevel(stack, modifiable, "head");
+            int totalToughness = MESProtectionCalculator.getTotalToughness(stack, modifiable, "head");
+            float ricochet = MESProtectionCalculator.getTotalRicochetChance(stack, modifiable, "head");
+            float materialFactor = ModernDamageCompat.getMaterialFactor(armorData, "HEAD");
 
             drawStat(graphics, font, "gui.modernequipment.refit.armor_level", totalLevel, nameX, valueX, yOffset, fontColor);
             yOffset += 10;
@@ -150,7 +139,7 @@ public final class EquipmentPropertyDiagrams {
     }
 
     private static void drawBodyArmorProperties(GuiGraphics graphics, Font font, boolean precise,
-                                                ArmorData armorData, ItemStack stack, IModifiableEquipment modifiable,
+                                                Object armorData, ItemStack stack, IModifiableEquipment modifiable,
                                                 float moveSpeed, float ergonomics,
                                                 int remainingDura, int maxDura, float weight,
                                                 int barStartX, int barEndX, int barMaxWidth,
@@ -159,43 +148,39 @@ public final class EquipmentPropertyDiagrams {
         if (precise) {
             graphics.drawString(font, Component.translatable("gui.modernequipment.refit.protection_level"), nameX, yOffset, fontColor, false);
             yOffset += 10;
-            ModDamageSubPart[] subParts = {
-                    ModDamageSubPart.CHEST_FRONT, ModDamageSubPart.CHEST_BACK,
-                    ModDamageSubPart.STOMACH_FRONT, ModDamageSubPart.STOMACH_BACK
+            String[] subPartKeys = {
+                    "chest_front", "chest_back",
+                    "stomach_front", "stomach_back"
             };
-            for (ModDamageSubPart subPart : subParts) {
-                int totalLevel = MESProtectionCalculator.getTotalSubProtectionLevel(stack, modifiable, subPart);
+            for (String subPartKey : subPartKeys) {
+                int totalLevel = MESProtectionCalculator.getTotalSubProtectionLevel(stack, modifiable, subPartKey);
                 if (totalLevel == 0) continue;
-                int totalToughness = MESProtectionCalculator.getTotalSubToughness(stack, modifiable, subPart);
-                String roman = RomanNumberHelper.toRomanGrade(totalLevel);
-                String subPartKey = "tooltip.moderndamage.subpart." + subPart.getSubKey();
-                Component subPartName = Component.translatable(subPartKey);
+                int totalToughness = MESProtectionCalculator.getTotalSubToughness(stack, modifiable, subPartKey);
+                String roman = ModernDamageCompat.toRomanGrade(totalLevel);
+                Component subPartName = Component.translatable("tooltip.moderndamage.subpart." + subPartKey);
                 Component line = Component.translatable("tooltip.moderndamage.protection_line_roman", subPartName, roman, totalLevel)
                         .append(Component.literal(" [" + totalToughness + "]").withStyle(ChatFormatting.GRAY));
                 graphics.drawString(font, line, nameX + 5, yOffset, fontColor, false);
                 yOffset += 10;
             }
-            float materialFactorChest = armorData != null ? armorData.getMaterialFactor(ModDamagePart.CHEST) : 1.0f;
+            float materialFactorChest = ModernDamageCompat.getMaterialFactor(armorData, "CHEST");
             graphics.drawString(font, Component.translatable("gui.modernequipment.refit.material_factor_chest"), nameX, yOffset, fontColor, false);
             graphics.drawString(font, String.format("%.2f", materialFactorChest), valueX, yOffset, fontColor, false);
             yOffset += 10;
-            float materialFactorStomach = armorData != null ? armorData.getMaterialFactor(ModDamagePart.STOMACH) : 1.0f;
+            float materialFactorStomach = ModernDamageCompat.getMaterialFactor(armorData, "STOMACH");
             graphics.drawString(font, Component.translatable("gui.modernequipment.refit.material_factor_stomach"), nameX, yOffset, fontColor, false);
             graphics.drawString(font, String.format("%.2f", materialFactorStomach), valueX, yOffset, fontColor, false);
             yOffset += 10;
         } else {
-            ModDamagePart chestPart = ModDamagePart.CHEST;
-            ModDamagePart stomachPart = ModDamagePart.STOMACH;
+            int chestLevel = MESProtectionCalculator.getTotalProtectionLevel(stack, modifiable, "chest");
+            int chestToughness = MESProtectionCalculator.getTotalToughness(stack, modifiable, "chest");
+            float chestRicochet = MESProtectionCalculator.getTotalRicochetChance(stack, modifiable, "chest");
+            float chestMaterial = ModernDamageCompat.getMaterialFactor(armorData, "CHEST");
 
-            int chestLevel = MESProtectionCalculator.getTotalProtectionLevel(stack, modifiable, chestPart);
-            int chestToughness = MESProtectionCalculator.getTotalToughness(stack, modifiable, chestPart);
-            float chestRicochet = MESProtectionCalculator.getTotalRicochetChance(stack, modifiable, chestPart);
-            float chestMaterial = armorData != null ? armorData.getMaterialFactor(chestPart) : 1.0f;
-
-            int stomachLevel = MESProtectionCalculator.getTotalProtectionLevel(stack, modifiable, stomachPart);
-            int stomachToughness = MESProtectionCalculator.getTotalToughness(stack, modifiable, stomachPart);
-            float stomachRicochet = MESProtectionCalculator.getTotalRicochetChance(stack, modifiable, stomachPart);
-            float stomachMaterial = armorData != null ? armorData.getMaterialFactor(stomachPart) : 1.0f;
+            int stomachLevel = MESProtectionCalculator.getTotalProtectionLevel(stack, modifiable, "stomach");
+            int stomachToughness = MESProtectionCalculator.getTotalToughness(stack, modifiable, "stomach");
+            float stomachRicochet = MESProtectionCalculator.getTotalRicochetChance(stack, modifiable, "stomach");
+            float stomachMaterial = ModernDamageCompat.getMaterialFactor(armorData, "STOMACH");
 
             graphics.drawString(font, Component.translatable("gui.modernequipment.refit.chest"), nameX, yOffset, fontColor, false);
             yOffset += 10;
@@ -291,11 +276,6 @@ public final class EquipmentPropertyDiagrams {
         } else {
             graphics.drawString(font, "0", valueX, y, fontColor, false);
         }
-    }
-
-    private static boolean isPreciseMode() {
-        ModClothConfig config = getConfig();
-        return config.enablePreciseHitbox && config.damageModel == ModClothConfig.DamageModel.HARDCORE;
     }
 
     private static int calculatePanelHeight(String type, boolean precise) {

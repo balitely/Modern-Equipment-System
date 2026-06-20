@@ -9,9 +9,6 @@ import com.modernequipment.core.data.EquipmentData;
 import com.modernequipment.core.item.EquipmentArmorItem;
 import com.modernequipment.core.item.EquipmentItem;
 import com.modernequipment.core.loader.EquipmentDataManager;
-import com.moderndamage.control.api.IProtectionSourceProvider;
-import com.moderndamage.control.api.ModDamageSubPart;
-import com.moderndamage.control.api.ProtectionSource;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
@@ -20,14 +17,22 @@ import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.*;
 
-public class MESProtectionSourceProvider implements IProtectionSourceProvider {
+/**
+ * MES 保护来源数据提供器。
+ * 不再直接实现 MDC 的 IProtectionSourceProvider 接口，
+ * 而是作为一个纯数据类，由 ModernDamageCompat 通过反射包装后注册到 MDC。
+ */
+public class MESProtectionSourceProvider {
 
     private static final String ATTACHMENTS_DURABILITY_KEY = "AttachmentsDurability";
 
-    @Override
-    public List<ProtectionSource> getAdditionalSources(ItemStack stack, LivingEntity target) {
+    /**
+     * 收集额外的 ProtectionSource 数据。
+     * 返回的结构体列表将被转换为 MDC 的 ProtectionSource 对象。
+     */
+    public List<ProtectionSourceEntry> getAdditionalSources(ItemStack stack, LivingEntity target) {
         MESMod.LOGGER.debug("getAdditionalSources called for stack={}, target={}", stack, target);
-        List<ProtectionSource> sources = new ArrayList<>();
+        List<ProtectionSourceEntry> sources = new ArrayList<>();
         if (!(stack.getItem() instanceof IModifiableEquipment modifiable)) {
             return sources;
         }
@@ -73,99 +78,50 @@ public class MESProtectionSourceProvider implements IProtectionSourceProvider {
 
             float durabilityPercent = 1.0f;
             if (maxDura > 0) {
-                int effectiveDura = currentDura - 1;  // 耐久为 1 时比例为 0
-                if (effectiveDura <= 0) continue;    // 双重保险
+                int effectiveDura = currentDura - 1;
+                if (effectiveDura <= 0) continue;
                 durabilityPercent = (float) effectiveDura / (float) maxDura;
                 durabilityPercent = Math.max(0.0f, Math.min(1.0f, durabilityPercent));
             }
 
-            int primaryLevel = 0;
-            if (effectiveCombat.getArmorLevels() != null && !effectiveCombat.getArmorLevels().isEmpty()) {
-                primaryLevel = effectiveCombat.getArmorLevels().values().stream().max(Integer::compare).orElse(0);
-            }
-            int dynamicPrimaryLevel = (int) Math.round(primaryLevel * durabilityPercent);
-            if (dynamicPrimaryLevel < 0) dynamicPrimaryLevel = 0;
-
-            int primaryToughness = 0;
-            if (effectiveCombat.getToughness() != null && !effectiveCombat.getToughness().isEmpty()) {
-                primaryToughness = effectiveCombat.getToughness().values().stream().max(Integer::compare).orElse(0);
-            }
-            int dynamicPrimaryToughness = (int) Math.round(primaryToughness * durabilityPercent);
-            if (dynamicPrimaryToughness < 0) dynamicPrimaryToughness = 0;
-
-            float primaryRicochet = 0.0f;
-            if (effectiveCombat.getRicochetChance() != null && !effectiveCombat.getRicochetChance().isEmpty()) {
-                primaryRicochet = effectiveCombat.getRicochetChance().values().stream().max(Float::compare).orElse(0.0f);
-            }
-            float dynamicPrimaryRicochet = primaryRicochet * durabilityPercent;
-            if (dynamicPrimaryRicochet < 0) dynamicPrimaryRicochet = 0;
-
-            Map<ModDamageSubPart, Integer> scaledSubProtection = new HashMap<>();
-            if (effectiveCombat.getArmorLevelsSub() != null) {
-                for (Map.Entry<String, Integer> subEntry : effectiveCombat.getArmorLevelsSub().entrySet()) {
-                    ModDamageSubPart subPart = ModDamageSubPart.bySubKey(subEntry.getKey());
-                    if (subPart != null) {
-                        int scaled = (int) Math.round(subEntry.getValue() * durabilityPercent);
-                        if (scaled > 0) {
-                            scaledSubProtection.put(subPart, scaled);
-                        }
-                    }
-                }
-            }
-
-            Map<ModDamageSubPart, Integer> scaledSubToughness = new HashMap<>();
-            if (effectiveCombat.getToughnessSub() != null) {
-                for (Map.Entry<String, Integer> subEntry : effectiveCombat.getToughnessSub().entrySet()) {
-                    ModDamageSubPart subPart = ModDamageSubPart.bySubKey(subEntry.getKey());
-                    if (subPart != null) {
-                        int scaled = (int) Math.round(subEntry.getValue() * durabilityPercent);
-                        if (scaled > 0) {
-                            scaledSubToughness.put(subPart, scaled);
-                        }
-                    }
-                }
-            }
-
-            Map<ModDamageSubPart, Float> scaledSubRicochet = new HashMap<>();
-            if (effectiveCombat.getRicochetSub() != null) {
-                for (Map.Entry<String, Float> subEntry : effectiveCombat.getRicochetSub().entrySet()) {
-                    ModDamageSubPart subPart = ModDamageSubPart.bySubKey(subEntry.getKey());
-                    if (subPart != null) {
-                        float scaled = subEntry.getValue() * durabilityPercent;
-                        if (scaled > 0.01f) {
-                            scaledSubRicochet.put(subPart, scaled);
-                        }
-                    }
-                }
-            }
-
-            float materialFactor = 1.0f;
-            if (effectiveCombat.getMaterialFactor() != null && !effectiveCombat.getMaterialFactor().isEmpty()) {
-                materialFactor = effectiveCombat.getMaterialFactor().values().stream().findFirst().orElse(1.0f);
-            }
-
-            ItemStack virtualStack = new ItemStack(ForgeRegistries.ITEMS.getValue(attId));
-            ProtectionSource source = new ProtectionSource(
-                    virtualStack,
-                    scaledSubProtection,
-                    scaledSubToughness,
-                    scaledSubRicochet,
-                    materialFactor,
-                    null,
-                    dynamicPrimaryLevel,
-                    dynamicPrimaryToughness,
-                    dynamicPrimaryRicochet,
-                    false
-            );
-            sources.add(source);
+            ProtectionSourceEntry entryData = new ProtectionSourceEntry();
+            entryData.attachmentId = attId;
+            entryData.armorLevels = effectiveCombat.getArmorLevels();
+            entryData.toughness = effectiveCombat.getToughness();
+            entryData.ricochetChance = effectiveCombat.getRicochetChance();
+            entryData.armorLevelsSub = effectiveCombat.getArmorLevelsSub();
+            entryData.toughnessSub = effectiveCombat.getToughnessSub();
+            entryData.ricochetSub = effectiveCombat.getRicochetSub();
+            entryData.materialFactor = effectiveCombat.getMaterialFactor();
+            entryData.durabilityPercent = durabilityPercent;
+            sources.add(entryData);
 
             if (MESMod.LOGGER.isDebugEnabled()) {
-                MESMod.LOGGER.debug("Attachment {} in slot {}: durability={}/{}, primaryLevel {}->{}, primaryToughness {}->{}, primaryRicochet {}->{}",
-                        attId, slot, currentDura, maxDura, primaryLevel, dynamicPrimaryLevel,
-                        primaryToughness, dynamicPrimaryToughness, primaryRicochet, dynamicPrimaryRicochet);
+                MESMod.LOGGER.debug("Attachment {} in slot {}: durability={}/{}",
+                        attId, slot, currentDura, maxDura);
             }
         }
-        MESMod.LOGGER.debug("Returning {} protection sources (dynamic scaling applied)", sources.size());
+        MESMod.LOGGER.debug("Returning {} protection source entries (dynamic scaling applied)", sources.size());
         return sources;
+    }
+
+    public static class ProtectionSourceEntry {
+        public ResourceLocation attachmentId;
+        /** 主部位防护等级 Map<部位名, 等级> */
+        public Map<String, Integer> armorLevels;
+        /** 主部位韧性 */
+        public Map<String, Integer> toughness;
+        /** 主部位跳弹 */
+        public Map<String, Float> ricochetChance;
+        /** 子部位防护等级 Map<subKey, 等级> */
+        public Map<String, Integer> armorLevelsSub;
+        /** 子部位韧性 */
+        public Map<String, Integer> toughnessSub;
+        /** 子部位跳弹 */
+        public Map<String, Float> ricochetSub;
+        /** 材质系数 Map<部位, 系数> */
+        public Map<String, Float> materialFactor;
+        /** 耐久比例 0~1 */
+        public float durabilityPercent = 1.0f;
     }
 }

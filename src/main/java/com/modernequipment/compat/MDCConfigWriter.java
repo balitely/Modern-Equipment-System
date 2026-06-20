@@ -3,8 +3,8 @@ package com.modernequipment.compat;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
-import com.moderndamage.control.armor.ArmorDataLoader;
 import com.modernequipment.MESMod;
+import com.modernequipment.compat.ModernDamageCompat;
 import com.modernequipment.core.data.CombatProperties;
 import com.modernequipment.core.data.EquipmentData;
 import com.modernequipment.core.loader.EquipmentDataManager;
@@ -25,6 +25,10 @@ public class MDCConfigWriter {
 
     public static void updateAndReload() {
         if (written) return;
+        if (!ModernDamageCompat.isLoaded()) {
+            MESMod.LOGGER.debug("MDC not loaded, skipping MDC config write");
+            return;
+        }
         try {
             JsonObject root = readOrCreateConfig();
             boolean changed = false;
@@ -113,7 +117,7 @@ public class MDCConfigWriter {
             if (changed) {
                 writeConfig(root);
                 try {
-                    ArmorDataLoader.load();
+                    ModernDamageCompat.reloadArmorData();
                     MESMod.LOGGER.info("MDC config reloaded successfully");
                 } catch (Exception e) {
                     MESMod.LOGGER.error("Failed to reload MDC config. MES armor data may need a game restart to take effect.", e);

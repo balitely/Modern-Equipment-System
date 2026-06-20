@@ -34,6 +34,12 @@ public class EquipmentData {
     @SerializedName("disables_chest_rig_slot")
     private boolean disablesChestRigSlot = false;
 
+    // MC原版护甲属性
+    @SerializedName("vanilla_armor")
+    private int vanillaArmor = 0;
+    @SerializedName("vanilla_armor_toughness")
+    private float vanillaArmorToughness = 0.0f;
+
     public String getSubType() { return subType; }
     public void setSubType(String subType) { this.subType = subType; }
     public boolean isDisablesFaceSlot() { return disablesFaceSlot; }
@@ -70,6 +76,12 @@ public class EquipmentData {
     public void setRender(RenderProperties render) { this.render = render; }
     public NightVisionProperties getNightVision() { return nightVision; }
     public void setNightVision(NightVisionProperties nightVision) { this.nightVision = nightVision; }
+
+    public int getVanillaArmor() { return vanillaArmor; }
+    public void setVanillaArmor(int vanillaArmor) { this.vanillaArmor = vanillaArmor; }
+
+    public float getVanillaArmorToughness() { return vanillaArmorToughness; }
+    public void setVanillaArmorToughness(float vanillaArmorToughness) { this.vanillaArmorToughness = vanillaArmorToughness; }
 
     public boolean hasInventory() { return inventory != null && inventory.getTotalSlots() > 0; }
 }

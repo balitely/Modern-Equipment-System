@@ -3,6 +3,7 @@ package com.modernequipment.client.renderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.modernequipment.MESMod;
 import com.modernequipment.core.item.EquipmentItem;
+import com.modernequipment.util.ResourceValidator;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -61,6 +62,15 @@ public class CurioArmorRenderer implements ICurioRenderer {
         if (modelPath == null || modelPath.isEmpty()) {
             MESMod.LOGGER.warn("Model path is null or empty, cannot render");
             return;
+        }
+
+        // ==================== 检查贴图是否存在 ====================
+        String texturePath = equipmentItem.getData().getRender().getTexture();
+        if (texturePath != null && !texturePath.isEmpty()) {
+            if (!ResourceValidator.textureExists(texturePath)) {
+                MESMod.LOGGER.warn("Texture not found: {}, skipping render", texturePath);
+                return;
+            }
         }
 
         poseStack.pushPose();

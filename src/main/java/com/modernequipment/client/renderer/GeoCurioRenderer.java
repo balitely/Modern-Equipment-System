@@ -143,6 +143,16 @@ public class GeoCurioRenderer implements ICurioRenderer, GeoRenderer<EquipmentIt
         ResourceLocation texPath = model.getTextureResource(equipmentItem);
         MESDebugLogger.info(MESMod.LOGGER, "GeoCurioRenderer - model: {}, texture: {}", modelPath, texPath);
 
+        // 检查是否使用了默认资源（表示原始资源不存在）
+        boolean usingDefaultModel = modelPath.equals(com.modernequipment.util.ResourceValidator.getDefaultGeo());
+        boolean usingDefaultTexture = texPath.equals(com.modernequipment.util.ResourceValidator.getDefaultTexture());
+
+        // 如果模型和贴图都是默认的，说明原始资源都不存在，直接跳过渲染
+        if (usingDefaultModel && usingDefaultTexture) {
+            MESDebugLogger.info(MESMod.LOGGER, "GeoCurioRenderer - Both model and texture are default (original resources not found), skipping render for: {}", stack.getItem());
+            return;
+        }
+
         // 烘焙模型
         BakedGeoModel bakedModel;
         try {
