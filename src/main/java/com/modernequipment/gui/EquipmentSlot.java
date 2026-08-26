@@ -2,8 +2,8 @@ package com.modernequipment.gui;
 
 import com.modernequipment.core.data.SlotDefinition;
 import com.modernequipment.core.inventory.EquipmentSubInventoryHandler;
-import com.sighs.petiteinventory.init.Area;
-import com.sighs.petiteinventory.utils.ItemUtils;
+import com.sighs.petiteinventory.inventory.Area;
+import com.sighs.petiteinventory.inventory.ItemInventoryService;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.IItemHandler;
@@ -71,7 +71,7 @@ public class EquipmentSlot extends SlotItemHandler {
             if (existing.isEmpty()) continue;
 
             // 通过 PetiteInventory 获取物品尺寸（支持旋转）
-            Area area = ItemUtils.getArea(existing);
+            Area area = ItemInventoryService.getArea(existing);
             int itemWidth = area.width();
             int itemHeight = area.height();
 

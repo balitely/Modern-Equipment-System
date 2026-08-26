@@ -53,8 +53,8 @@ public class EquipmentItem extends Item implements ICurioItem, IModifiableEquipm
         super(properties.durability(data.getDurability()));
         this.data = data;
         InventoryProperties inv = data.getInventory();
-        if (inv != null && "custom".equals(inv.getType()) && inv.getSlots() != null) {
-            this.slotDefinitions = inv.getSlots();
+        if (inv != null) {
+            this.slotDefinitions = inv.getOriginalSlotList();
         } else {
             this.slotDefinitions = new ArrayList<>();
         }

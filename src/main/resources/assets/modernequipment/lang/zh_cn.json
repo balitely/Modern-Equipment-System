@@ -1,4 +1,7 @@
 {
+  "item.modernequipment.icon_chest_rig": "基础战术胸挂",
+  "item.modernequipment.icon_backpack": "基础战术背包",
+  "item.modernequipment.icon_safe_box": "基础安全箱",
   "itemGroup.modernequipment.helmets": "头盔",
   "itemGroup.modernequipment.helmet_attachments": "头盔配件",
   "itemGroup.modernequipment.face_equipment": "面部装备",
