@@ -5,6 +5,7 @@ import com.modernequipment.compat.MESProtectionSourceProvider;
 import com.modernequipment.compat.ModernDamageCompat;
 import com.modernequipment.core.data.AttachmentData;
 import com.modernequipment.core.data.EquipmentData;
+import com.modernequipment.core.data.InventoryProperties;
 import com.modernequipment.core.item.AttachmentItem;
 import com.modernequipment.core.item.EquipmentArmorItem;
 import com.modernequipment.core.item.EquipmentItem;
@@ -66,13 +67,22 @@ public class MESMod {
     public static final RegistryObject<Item> ICON_HELMET_ATTACHMENT = ICON_ITEMS.register("icon_helmet_attachment", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> ICON_FACE_EQUIPMENT = ICON_ITEMS.register("icon_face_equipment", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> ICON_BODY_ARMOR = ICON_ITEMS.register("icon_body_armor", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> ICON_CHEST_RIG = ICON_ITEMS.register("icon_chest_rig", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> ICON_CHEST_RIG = ICON_ITEMS.register("icon_chest_rig", () ->
+            new EquipmentItem(new Item.Properties().stacksTo(1), builtinStorageData(
+                    "icon_chest_rig", "chest_rig",
+                    MESConfig.getBuiltinRigColumns(), MESConfig.getBuiltinRigRows())));
     public static final RegistryObject<Item> ICON_ARMOR_PLATE = ICON_ITEMS.register("icon_armor_plate", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> ICON_LIMB_ARMOR = ICON_ITEMS.register("icon_limb_armor", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> ICON_BACKPACK = ICON_ITEMS.register("icon_backpack", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> ICON_BACKPACK = ICON_ITEMS.register("icon_backpack", () ->
+            new EquipmentItem(new Item.Properties().stacksTo(1), builtinStorageData(
+                    "icon_backpack", "backpack",
+                    MESConfig.getBuiltinBackpackColumns(), MESConfig.getBuiltinBackpackRows())));
     public static final RegistryObject<Item> ICON_TACTICAL_BELT = ICON_ITEMS.register("icon_tactical_belt", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> ICON_TACTICAL_HEADSET = ICON_ITEMS.register("icon_tactical_headset", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> ICON_SAFE_BOX = ICON_ITEMS.register("icon_safe_box", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> ICON_SAFE_BOX = ICON_ITEMS.register("icon_safe_box", () ->
+            new EquipmentItem(new Item.Properties().stacksTo(1), builtinStorageData(
+                    "icon_safe_box", "safe_box",
+                    MESConfig.getBuiltinSafeBoxColumns(), MESConfig.getBuiltinSafeBoxRows())));
 
     // 网络通道（主通道，用于配件改装）
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
@@ -90,6 +100,10 @@ public class MESMod {
         // 注册客户端配置
         net.minecraftforge.fml.ModLoadingContext.get().registerConfig(
                 net.minecraftforge.fml.config.ModConfig.Type.CLIENT, MESConfig.CLIENT_CONFIG);
+        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(
+                net.minecraftforge.fml.config.ModConfig.Type.COMMON,
+                MESConfig.COMMON_CONFIG,
+                "modernequipment-storage.toml");
 
         ICON_ITEMS.register(modEventBus);
         ModCreativeTabs.TABS.register(modEventBus);
@@ -104,6 +118,20 @@ public class MESMod {
 
         // 条件注册 MDC 相关功能
         registerMDCFeatures();
+    }
+
+    private static EquipmentData builtinStorageData(String id, String type, int columns, int rows) {
+        EquipmentData data = new EquipmentData();
+        data.setId(id);
+        data.setType(type);
+        data.setDisplayName("item.modernequipment." + id);
+        data.setMaxStackSize(1);
+        InventoryProperties inventory = new InventoryProperties();
+        inventory.setType("grid");
+        inventory.setColumns(columns);
+        inventory.setRows(rows);
+        data.setInventory(inventory);
+        return data;
     }
 
     /**

@@ -1,4 +1,7 @@
 {
+  "item.modernequipment.icon_chest_rig": "Basic Chest Rig",
+  "item.modernequipment.icon_backpack": "Basic Backpack",
+  "item.modernequipment.icon_safe_box": "Basic Safe Box",
   "itemGroup.modernequipment.helmets": "Helmets",
   "itemGroup.modernequipment.helmet_attachments": "Helmet Attachments",
   "itemGroup.modernequipment.face_equipment": "Face Equipment",
