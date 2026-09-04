@@ -135,8 +135,9 @@ public class MESMod {
     }
 
     /**
-     * 仅在 MDC 加载时注册 ArmorHitListener 和 ProtectionSourceProvider。
-     * 避免直接引用 MDC 事件类型，全部通过反射 + ModernDamageCompat 桥接。
+     * MDC 1.0.32: prefer the native ProtectionSourceProvider.  The legacy
+     * ArmorHitEvent listener is registered only as a fallback, otherwise a
+     * plate would lose durability once in MDC and once again in MES.
      */
     private void registerMDCFeatures() {
         if (!ModernDamageCompat.isLoaded()) {
@@ -144,32 +145,32 @@ public class MESMod {
             return;
         }
 
+        boolean providerRegistered = false;
         try {
-            // 1. 通过反射注册 ArmorHitEvent 监听器
+            MESProtectionSourceProvider provider = new MESProtectionSourceProvider();
+            providerRegistered = ModernDamageCompat.registerProtectionSourceProvider(provider);
+            if (providerRegistered) {
+                LOGGER.info("MESProtectionSourceProvider registered for MDC 1.0.32");
+            }
+        } catch (Throwable e) {
+            LOGGER.error("Failed to register MESProtectionSourceProvider", e);
+        }
+
+        if (providerRegistered) {
+            LOGGER.info("Skipping legacy ArmorHitListener because MDC provider owns attachment durability");
+            return;
+        }
+
+        try {
             Class<?> armorHitEventClass = Class.forName("com.moderndamage.control.api.event.ArmorHitEvent");
             MinecraftForge.EVENT_BUS.addListener(
                     net.minecraftforge.eventbus.api.EventPriority.NORMAL, false,
                     (Class) armorHitEventClass,
                     (java.util.function.Consumer) event ->
                             ArmorHitListener.handleArmorHit((net.minecraftforge.eventbus.api.Event) event));
-            LOGGER.info("Registered ArmorHitListener via reflection (MDC loaded)");
+            LOGGER.warn("Using legacy ArmorHitListener fallback because MDC provider registration failed");
         } catch (Exception e) {
-            LOGGER.error("Failed to register ArmorHitEvent listener", e);
-        }
-
-        // 2. 注册 ProtectionSourceProvider
-        registerProviderViaReflection();
-    }
-
-    private void registerProviderViaReflection() {
-        try {
-            // 创建 MESProtectionSourceProvider 实例
-            MESProtectionSourceProvider provider = new MESProtectionSourceProvider();
-            // 通过 ModernDamageCompat 注册到 MDC
-            ModernDamageCompat.registerProtectionSourceProvider(provider);
-            LOGGER.info("MESProtectionSourceProvider registered");
-        } catch (Exception e) {
-            LOGGER.error("Failed to register MESProtectionSourceProvider", e);
+            LOGGER.error("Failed to register ArmorHitEvent listener fallback", e);
         }
     }
 

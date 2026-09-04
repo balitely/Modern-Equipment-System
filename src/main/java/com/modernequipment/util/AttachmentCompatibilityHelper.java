@@ -36,7 +36,7 @@ public class AttachmentCompatibilityHelper {
         }
         String attachmentType = attachmentData.getType();
         if (attachmentType == null) return false;
-        return allowedTypes.contains(attachmentType);
+        return containsIgnoreCase(allowedTypes, attachmentType);
     }
 
     private static boolean isParentTypeCompatible(EquipmentData equipmentData, AttachmentData attachmentData) {
@@ -45,7 +45,46 @@ public class AttachmentCompatibilityHelper {
             return true;
         }
         String equipmentType = equipmentData.getType();
-        return equipmentType != null && parentTypes.contains(equipmentType);
+        if (equipmentType != null && containsIgnoreCase(parentTypes, equipmentType)) {
+            return true;
+        }
+
+        // Backward-compatible armored-rig rule: historical plate packs usually
+        // declared only body_armor as their parent.  A chest_rig that explicitly
+        // allows armor attachment types is an armored chest rig / plate carrier,
+        // so those body-armor protection attachments are valid on it as well.
+        if ("chest_rig".equalsIgnoreCase(equipmentType)
+                && containsIgnoreCase(parentTypes, "body_armor")
+                && isBodyProtectionAttachment(attachmentData.getType())
+                && equipmentAllowsType(equipmentData, attachmentData.getType())) {
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean equipmentAllowsType(EquipmentData equipmentData, String attachmentType) {
+        List<String> allowed = equipmentData.getAllowAttachmentTypes();
+        // The body_armor alias is only for chest rigs that explicitly opt into
+        // protective attachments.  A plain rig with no allow-list must not
+        // accidentally become a plate carrier.
+        return allowed != null && !allowed.isEmpty() && containsIgnoreCase(allowed, attachmentType);
+    }
+
+    private static boolean isBodyProtectionAttachment(String type) {
+        if (type == null) return false;
+        return switch (type.toLowerCase(java.util.Locale.ROOT)) {
+            case "armor_plate", "front_plate", "back_plate", "side_plate",
+                    "groin_plate", "neck_armor" -> true;
+            default -> false;
+        };
+    }
+
+    private static boolean containsIgnoreCase(List<String> values, String wanted) {
+        if (values == null || wanted == null) return false;
+        for (String value : values) {
+            if (value != null && value.equalsIgnoreCase(wanted)) return true;
+        }
+        return false;
     }
 
     private static boolean isDetailedCompatible(ItemStack attachmentStack, ItemStack equipmentStack,

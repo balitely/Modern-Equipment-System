@@ -40,7 +40,7 @@ public class MESProtectionCalculator {
         int total = 0;
         EquipmentData data = getEquipmentData(equipment);
         if (data != null && data.getCombat() != null && data.getCombat().getToughness() != null) {
-            total += applyToughnessScaling(equipment, data.getCombat().getToughness().getOrDefault(partName, 0));
+            total += applyToughnessScaling(equipment, data.getCombat().getToughnessValue(partName));
         }
         total += getAttachmentToughness(equipment, modifiable, partName, false);
         return Math.min(total, 100);
@@ -51,7 +51,7 @@ public class MESProtectionCalculator {
         int total = 0;
         EquipmentData data = getEquipmentData(equipment);
         if (data != null && data.getCombat() != null && data.getCombat().getToughnessSub() != null) {
-            total += applyToughnessScaling(equipment, data.getCombat().getToughnessSub().getOrDefault(subPartKey, 0));
+            total += applyToughnessScaling(equipment, data.getCombat().getToughnessSubValue(subPartKey));
         }
         total += getAttachmentToughness(equipment, modifiable, subPartKey, true);
         return Math.min(total, 100);
@@ -62,7 +62,7 @@ public class MESProtectionCalculator {
         float max = 0;
         EquipmentData data = getEquipmentData(equipment);
         if (data != null && data.getCombat() != null && data.getCombat().getRicochetChance() != null) {
-            max = Math.max(max, data.getCombat().getRicochetChance().getOrDefault(partName, 0f));
+            max = Math.max(max, data.getCombat().getRicochetChanceValue(partName));
         }
         Map<AttachmentType, ResourceLocation> attachments = modifiable.getAttachments(equipment);
         for (Map.Entry<AttachmentType, ResourceLocation> entry : attachments.entrySet()) {
@@ -74,7 +74,7 @@ public class MESProtectionCalculator {
             if (effectiveCombat == null) continue;
             float ric = 0;
             if (effectiveCombat.getRicochetChance() != null) {
-                ric = effectiveCombat.getRicochetChance().getOrDefault(partName, 0f);
+                ric = effectiveCombat.getRicochetChanceValue(partName);
             }
             if (ric > 0) {
                 int maxDura = attData.getDurability();
@@ -94,7 +94,7 @@ public class MESProtectionCalculator {
         List<Integer> levels = new ArrayList<>();
         EquipmentData data = getEquipmentData(equipment);
         if (data != null && data.getCombat() != null && data.getCombat().getArmorLevels() != null) {
-            int baseLevel = data.getCombat().getArmorLevels().getOrDefault(partName, 0);
+            int baseLevel = data.getCombat().getArmorLevel(partName);
             if (baseLevel > 0) {
                 int scaled = applyProtectionScaling(equipment, baseLevel);
                 if (scaled > 0) levels.add(scaled);
@@ -109,7 +109,7 @@ public class MESProtectionCalculator {
             CombatProperties effectiveCombat = getEffectiveCombat(attData, slot);
             if (effectiveCombat == null) continue;
             if (effectiveCombat.getArmorLevels() != null) {
-                int plateLevel = effectiveCombat.getArmorLevels().getOrDefault(partName, 0);
+                int plateLevel = effectiveCombat.getArmorLevel(partName);
                 if (plateLevel > 0) {
                     int maxDura = attData.getDurability();
                     int currentDura = getAttachmentCurrentDura(equipment, slot, attId, maxDura);
@@ -129,7 +129,7 @@ public class MESProtectionCalculator {
         List<Integer> levels = new ArrayList<>();
         EquipmentData data = getEquipmentData(equipment);
         if (data != null && data.getCombat() != null && data.getCombat().getArmorLevelsSub() != null) {
-            int baseLevel = data.getCombat().getArmorLevelsSub().getOrDefault(subPartKey, 0);
+            int baseLevel = data.getCombat().getArmorLevelSub(subPartKey);
             if (baseLevel > 0) {
                 int scaled = applyProtectionScaling(equipment, baseLevel);
                 if (scaled > 0) levels.add(scaled);
@@ -144,7 +144,7 @@ public class MESProtectionCalculator {
             CombatProperties effectiveCombat = getEffectiveCombat(attData, slot);
             if (effectiveCombat == null) continue;
             if (effectiveCombat.getArmorLevelsSub() != null) {
-                int plateLevel = effectiveCombat.getArmorLevelsSub().getOrDefault(subPartKey, 0);
+                int plateLevel = effectiveCombat.getArmorLevelSub(subPartKey);
                 if (plateLevel > 0) {
                     int maxDura = attData.getDurability();
                     int currentDura = getAttachmentCurrentDura(equipment, slot, attId, maxDura);
@@ -172,9 +172,9 @@ public class MESProtectionCalculator {
             if (effectiveCombat == null) continue;
             int toughness = 0;
             if (sub && effectiveCombat.getToughnessSub() != null) {
-                toughness = effectiveCombat.getToughnessSub().getOrDefault(key, 0);
+                toughness = effectiveCombat.getToughnessSubValue(key);
             } else if (!sub && effectiveCombat.getToughness() != null) {
-                toughness = effectiveCombat.getToughness().getOrDefault(key, 0);
+                toughness = effectiveCombat.getToughnessValue(key);
             }
             if (toughness > 0) {
                 int maxDura = attData.getDurability();

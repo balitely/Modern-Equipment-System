@@ -19,6 +19,8 @@ public class CombatProperties {
     private Map<String, Integer> toughnessSub = new HashMap<>();
     @SerializedName("ricochet_sub")
     private Map<String, Float> ricochetSub = new HashMap<>();
+    @SerializedName("material_factor_sub")
+    private Map<String, Float> materialFactorSub = new HashMap<>();
 
     private ModifierProperties modifiers;
 
@@ -37,6 +39,30 @@ public class CombatProperties {
     public void setToughnessSub(Map<String, Integer> toughnessSub) { this.toughnessSub = toughnessSub; }
     public Map<String, Float> getRicochetSub() { return ricochetSub; }
     public void setRicochetSub(Map<String, Float> ricochetSub) { this.ricochetSub = ricochetSub; }
+    public Map<String, Float> getMaterialFactorSub() { return materialFactorSub; }
+    public void setMaterialFactorSub(Map<String, Float> materialFactorSub) { this.materialFactorSub = materialFactorSub; }
+
+    /** Case-insensitive lookup for body-part/sub-part JSON keys. */
+    public static <T> T getIgnoreCase(Map<String, T> map, String key, T fallback) {
+        if (map == null || map.isEmpty() || key == null) return fallback;
+        T direct = map.get(key);
+        if (direct != null) return direct;
+        for (Map.Entry<String, T> entry : map.entrySet()) {
+            if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(key) && entry.getValue() != null) {
+                return entry.getValue();
+            }
+        }
+        return fallback;
+    }
+
+    public int getArmorLevel(String key) { return getIgnoreCase(armorLevels, key, 0); }
+    public int getArmorLevelSub(String key) { return getIgnoreCase(armorLevelsSub, key, 0); }
+    public int getToughnessValue(String key) { return getIgnoreCase(toughness, key, 0); }
+    public int getToughnessSubValue(String key) { return getIgnoreCase(toughnessSub, key, 0); }
+    public float getMaterialFactorValue(String key) { return getIgnoreCase(materialFactor, key, 1.0f); }
+    public float getMaterialFactorSubValue(String key) { return getIgnoreCase(materialFactorSub, key, Float.NaN); }
+    public float getRicochetChanceValue(String key) { return getIgnoreCase(ricochetChance, key, 0.0f); }
+    public float getRicochetSubValue(String key) { return getIgnoreCase(ricochetSub, key, 0.0f); }
 
     public ModifierProperties getModifiers() { return modifiers; }
     public void setModifiers(ModifierProperties modifiers) { this.modifiers = modifiers; }

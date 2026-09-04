@@ -51,7 +51,8 @@ public final class EquipmentPropertyDiagrams {
         boolean precise = ModernDamageCompat.isPreciseMode();
         Object armorData = ModernDamageCompat.getArmorData(equipmentStack.getItem());
 
-        int panelHeight = calculatePanelHeight(equipmentType, precise);
+        boolean bodyArmorLike = isBodyArmorLike(data, equipmentType);
+        int panelHeight = calculatePanelHeight(equipmentType, precise, bodyArmorLike);
         graphics.fill(x, y, x + 288, y + panelHeight, 0xAF222222);
 
         int barStartX = x + 83;
@@ -73,7 +74,7 @@ public final class EquipmentPropertyDiagrams {
                     barStartX, barEndX, barMaxWidth, barBackgroundColor, barBaseColor,
                     barPositivelyColor, barNegativeColor, fontColor,
                     nameTextStartX, valueTextStartX, yOffset);
-        } else if ("body_armor".equals(equipmentType)) {
+        } else if (bodyArmorLike) {
             drawBodyArmorProperties(graphics, font, precise, armorData, equipmentStack, modifiable,
                     totalMoveSpeed, totalErgonomics, remainingDura, maxDura, weight,
                     barStartX, barEndX, barMaxWidth, barBackgroundColor, barBaseColor,
@@ -278,10 +279,24 @@ public final class EquipmentPropertyDiagrams {
         }
     }
 
-    private static int calculatePanelHeight(String type, boolean precise) {
+    private static int calculatePanelHeight(String type, boolean precise, boolean bodyArmorLike) {
         if ("helmet".equals(type)) return precise ? 130 : 120;
-        else if ("body_armor".equals(type)) return precise ? 140 : 200;
+        else if (bodyArmorLike) return precise ? 140 : 200;
         return 110;
+    }
+
+    private static boolean isBodyArmorLike(EquipmentData data, String equipmentType) {
+        if ("body_armor".equals(equipmentType)) return true;
+        if (!"chest_rig".equals(equipmentType) || data == null) return false;
+        if (data.getAllowAttachmentTypes() == null) return false;
+        for (String type : data.getAllowAttachmentTypes()) {
+            if (type == null) continue;
+            switch (type.toLowerCase(java.util.Locale.ROOT)) {
+                case "armor_plate", "front_plate", "back_plate", "side_plate",
+                        "groin_plate", "neck_armor" -> { return true; }
+            }
+        }
+        return false;
     }
 
     private static EquipmentData getEquipmentData(ItemStack stack) {

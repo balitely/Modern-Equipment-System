@@ -26,6 +26,7 @@ import net.minecraftforge.common.capabilities.ICapabilityProvider;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.registries.ForgeRegistries;
+import top.theillusivec4.curios.api.SlotContext;
 import top.theillusivec4.curios.api.type.capability.ICurioItem;
 import software.bernie.geckolib.animatable.GeoItem;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
@@ -170,6 +171,58 @@ public class EquipmentItem extends Item implements ICurioItem, IModifiableEquipm
         }
     }
 
+    /**
+     * MES-specific Curios compatibility is item-local instead of using a global
+     * CurioEquipEvent DENY handler.  This is deliberately permissive for every
+     * unrelated Curios slot so backpacks, belts, safe boxes, etc. cannot be
+     * accidentally blocked by chest-rig/helmet compatibility rules.
+     */
+    @Override
+    public boolean canEquip(SlotContext slotContext, ItemStack stack) {
+        if (slotContext == null || slotContext.entity() == null) return true;
+
+        String slotId = slotContext.identifier();
+
+        // Chest-rig/body-armor exclusion is symmetric.  If either the rig
+        // being equipped OR the currently worn body armor declares
+        // disables_chest_rig_slot=true, they may not coexist.
+        if ("mes_chest_rig".equals(slotId)) {
+            ItemStack chestStack = slotContext.entity().getItemBySlot(EquipmentSlot.CHEST);
+            if (chestStack.isEmpty()) return true;
+
+            EquipmentData chestData = getMESData(chestStack);
+            boolean rigBlocksChest = data.isDisablesChestRigSlot();
+            boolean chestBlocksRig = chestData != null && chestData.isDisablesChestRigSlot();
+            return !rigBlocksChest && !chestBlocksRig;
+        }
+
+        // The currently worn helmet controls face/headset availability.
+        if ("mes_face".equals(slotId) || "mes_tactical_headset".equals(slotId)) {
+            EquipmentData helmetData = getMESData(slotContext.entity().getItemBySlot(EquipmentSlot.HEAD));
+            if (helmetData == null) return true;
+
+            if ("mes_face".equals(slotId)) {
+                return !helmetData.isDisablesFaceSlot();
+            }
+            return !helmetData.isDisablesHeadsetSlot();
+        }
+
+        // Do not interfere with backpack, belt, arm armor, safe box, or any
+        // other Curios slot. Curios' normal slot validation remains in charge.
+        return true;
+    }
+
+    private static EquipmentData getMESData(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return null;
+        if (stack.getItem() instanceof EquipmentArmorItem armorItem) {
+            return armorItem.getData();
+        }
+        if (stack.getItem() instanceof EquipmentItem equipmentItem) {
+            return equipmentItem.getData();
+        }
+        return null;
+    }
+
     @Override
     public Multimap<Attribute, AttributeModifier> getAttributeModifiers(EquipmentSlot slot, ItemStack stack) {
         EquipmentSlot targetSlot = getEquipmentSlot(stack);
@@ -281,9 +334,10 @@ public class EquipmentItem extends Item implements ICurioItem, IModifiableEquipm
         ResourceLocation attId = ForgeRegistries.ITEMS.getKey(attachment.getItem());
         AttachmentData attData = EquipmentDataManager.getAttachment(attId);
         if (attData != null && attData.getMountSlots() != null) {
-            if (!attData.getMountSlots().contains(slot.name().toLowerCase())) {
-                return false;
-            }
+            String wantedMountSlot = slot.name().toLowerCase(java.util.Locale.ROOT);
+            boolean mountAllowed = attData.getMountSlots().stream()
+                    .anyMatch(v -> v != null && v.equalsIgnoreCase(wantedMountSlot));
+            if (!mountAllowed) return false;
         }
 
         ResourceLocation id = att.getAttachmentId(attachment);
