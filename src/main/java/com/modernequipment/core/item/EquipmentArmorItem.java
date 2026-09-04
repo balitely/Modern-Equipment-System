@@ -10,14 +10,17 @@ import com.modernequipment.core.inventory.CombinedItemHandler;
 import com.modernequipment.core.inventory.EquipmentSubInventoryHandler;
 import com.modernequipment.core.loader.EquipmentDataManager;
 import com.modernequipment.util.AttachmentCompatibilityHelper;
+import com.modernequipment.util.MesInventoryHelper;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -71,6 +74,23 @@ public class EquipmentArmorItem extends ArmorItem implements ICurioItem, IModifi
 
     public EquipmentData getData() { return data; }
     public List<SlotDefinition> getSlotDefinitions() { return slotDefinitions; }
+
+    /**
+     * Hard-lock the vanilla chest armor slot while an MES chest-rig occupies
+     * it. Forge's InventoryMenu armor Slot delegates mayPlace() to this hook,
+     * so a held chestplate cannot be placed into the slot in the first place.
+     * The LivingEquipmentChangeEvent handler remains as a server-side fallback
+     * for right-click auto-equip and equipment changes initiated by other mods.
+     */
+    @Override
+    public boolean canEquip(ItemStack stack, EquipmentSlot armorType, Entity entity) {
+        if (armorType == EquipmentSlot.CHEST
+                && entity instanceof Player player
+                && MesInventoryHelper.isChestArmorSlotBlocked(player, stack)) {
+            return false;
+        }
+        return armorType == getType().getSlot();
+    }
 
     @Nonnull
     public List<EquipmentSubInventoryHandler> getSubHandlers(ItemStack stack) {
@@ -250,7 +270,10 @@ public class EquipmentArmorItem extends ArmorItem implements ICurioItem, IModifi
         ResourceLocation attId = ForgeRegistries.ITEMS.getKey(attachment.getItem());
         AttachmentData attData = EquipmentDataManager.getAttachment(attId);
         if (attData != null && attData.getMountSlots() != null) {
-            if (!attData.getMountSlots().contains(slot.name().toLowerCase())) return false;
+            String wantedMountSlot = slot.name().toLowerCase(java.util.Locale.ROOT);
+            boolean mountAllowed = attData.getMountSlots().stream()
+                    .anyMatch(v -> v != null && v.equalsIgnoreCase(wantedMountSlot));
+            if (!mountAllowed) return false;
         }
         ResourceLocation id = att.getAttachmentId(attachment);
         CompoundTag tag = equipment.getOrCreateTag();

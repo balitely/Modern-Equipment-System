@@ -111,7 +111,10 @@ public class EquipmentRefitScreen extends Screen {
         List<AttachmentType> slotsToShow;
         if ("helmet".equals(equipmentType)) {
             slotsToShow = helmetSlots;
-        } else if ("body_armor".equals(equipmentType)) {
+        } else if ("body_armor".equals(equipmentType) || isArmoredChestRig(equipmentType, allowedSlots)) {
+            // An armored chest rig remains a Curios chest-rig item, but it uses
+            // the same removable-protection layout as body armor.  Do not gate
+            // attachment UI purely on the registry item class/type.
             slotsToShow = bodyArmorSlots;
         } else {
             return;
@@ -144,6 +147,16 @@ public class EquipmentRefitScreen extends Screen {
                 }
             }
         }
+    }
+
+    private static boolean isArmoredChestRig(String equipmentType, List<AttachmentType> allowedSlots) {
+        if (!"chest_rig".equals(equipmentType) || allowedSlots == null || allowedSlots.isEmpty()) return false;
+        return allowedSlots.contains(AttachmentType.ARMOR_PLATE)
+                || allowedSlots.contains(AttachmentType.FRONT_PLATE)
+                || allowedSlots.contains(AttachmentType.BACK_PLATE)
+                || allowedSlots.contains(AttachmentType.SIDE_PLATE)
+                || allowedSlots.contains(AttachmentType.GROIN_PLATE)
+                || allowedSlots.contains(AttachmentType.NECK_ARMOR);
     }
 
     private void onSlotSelected(Button button) {

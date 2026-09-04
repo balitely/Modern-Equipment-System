@@ -139,7 +139,10 @@ public class EquipmentAttachmentSlot extends Button implements IStackTooltip {
                 case FACE_SHIELD: u = 2; break;
                 default: return null;
             }
-        } else if ("body_armor".equals(equipType)) {
+        } else if ("body_armor".equals(equipType) || "chest_rig".equals(equipType)) {
+            // Armored chest rigs use the same protection-slot ghost icons as body armor.
+            // Ordinary chest rigs never create these protection slots, so sharing the
+            // icon atlas here does not turn normal rigs into armor.
             switch (type) {
                 case FRONT_PLATE: u = 0; break;
                 case BACK_PLATE: u = 1; break;

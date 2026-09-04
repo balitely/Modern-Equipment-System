@@ -67,11 +67,36 @@ public class MDCConfigWriter {
                     itemObj.add("toughness", toughness);
                 }
 
+                JsonObject mat = new JsonObject();
                 if (combat.getMaterialFactor() != null && !combat.getMaterialFactor().isEmpty()) {
-                    JsonObject mat = new JsonObject();
                     for (Map.Entry<String, Float> e : combat.getMaterialFactor().entrySet()) {
-                        mat.addProperty(e.getKey().toLowerCase(), e.getValue());
+                        if (e.getKey() != null && e.getValue() != null && e.getValue() > 0.0f) {
+                            mat.addProperty(e.getKey().toLowerCase(), e.getValue());
+                        }
                     }
+                }
+
+                // MDC 1.0.32 does not have a native material_factor_sub field.
+                // Do not silently discard MES data: if a parent factor is absent,
+                // collapse sub-part factors into the corresponding MDC parent part.
+                if (combat.getMaterialFactorSub() != null && !combat.getMaterialFactorSub().isEmpty()) {
+                    Map<String, float[]> derived = new java.util.HashMap<>();
+                    for (Map.Entry<String, Float> e : combat.getMaterialFactorSub().entrySet()) {
+                        String parent = parentPartForSubKey(e.getKey());
+                        Float value = e.getValue();
+                        if (parent == null || value == null || value <= 0.0f) continue;
+                        float[] acc = derived.computeIfAbsent(parent, k -> new float[2]);
+                        acc[0] += value;
+                        acc[1] += 1.0f;
+                    }
+                    for (Map.Entry<String, float[]> e : derived.entrySet()) {
+                        if (!mat.has(e.getKey()) && e.getValue()[1] > 0.0f) {
+                            mat.addProperty(e.getKey(), e.getValue()[0] / e.getValue()[1]);
+                        }
+                    }
+                    MESMod.LOGGER.debug("MDC 1.0.32 has no material_factor_sub; collapsed MES sub-part factors for {} into parent material_factor", key);
+                }
+                if (!mat.entrySet().isEmpty()) {
                     itemObj.add("material_factor", mat);
                 }
 
@@ -129,6 +154,20 @@ public class MDCConfigWriter {
         } catch (Exception e) {
             MESMod.LOGGER.error("Unexpected error while writing MDC config", e);
         }
+    }
+
+
+    private static String parentPartForSubKey(String subKey) {
+        if (subKey == null) return null;
+        String key = subKey.toLowerCase(java.util.Locale.ROOT);
+        if (key.startsWith("head_")) return "head";
+        if (key.startsWith("chest_")) return "chest";
+        if (key.startsWith("stomach_")) return "stomach";
+        if (key.startsWith("left_shoulder") || key.startsWith("left_forearm")) return "left_arm";
+        if (key.startsWith("right_shoulder") || key.startsWith("right_forearm")) return "right_arm";
+        if (key.startsWith("left_thigh") || key.startsWith("left_calf") || key.startsWith("left_foot")) return "left_leg";
+        if (key.startsWith("right_thigh") || key.startsWith("right_calf") || key.startsWith("right_foot")) return "right_leg";
+        return null;
     }
 
     private static JsonObject readOrCreateConfig() {

@@ -207,16 +207,22 @@ public class ModernDamageCompat {
 
     // ==================== ProtectionSourceProvider 注册 ====================
 
-    public static void registerProtectionSourceProvider(Object provider) {
-        if (!loaded || provider == null) return;
+    public static boolean registerProtectionSourceProvider(Object provider) {
+        if (!loaded || provider == null) return false;
         try {
+            Class<?> providerInterface = Class.forName("com.moderndamage.control.api.IProtectionSourceProvider");
+            if (!providerInterface.isInstance(provider)) {
+                MESMod.LOGGER.error("MES ProtectionSourceProvider does not implement MDC IProtectionSourceProvider: {}", provider.getClass().getName());
+                return false;
+            }
             Class<?> registryClazz = Class.forName(PROVIDER_REGISTRY_CLASS);
-            Method m = registryClazz.getMethod("register",
-                    Class.forName("com.moderndamage.control.api.IProtectionSourceProvider"));
+            Method m = registryClazz.getMethod("register", providerInterface);
             m.invoke(null, provider);
             MESMod.LOGGER.info("Registered MES ProtectionSourceProvider via compat layer");
+            return true;
         } catch (Exception e) {
             MESMod.LOGGER.error("Failed to register MES ProtectionSourceProvider", e);
+            return false;
         }
     }
 
